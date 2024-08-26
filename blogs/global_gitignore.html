@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting Up a Global .gitignore</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Setting Up a Global .gitignore</h1>
+        <p>I had this Pyright configuration in one of my projects and didn't want to include this file in the <code>.gitignore</code>. My best buddy, my little brain, suggested me an idea: is there something called a global <code>.gitignore</code>? And the answer was YES, and it's pretty helpful!</p>
+
+        <h2>Here’s How I Set It Up:</h2>
+        <ol>
+            <li>
+                <p>Check if there is a default location for the global gitignore:</p>
+                <pre><code>git config --get core.excludesfile</code></pre>
+                <p>This command returns the location of the file if one exists. In my case, it didn’t.</p>
+            </li>
+            <li>
+                <p>Create a file at <code>$HOME/.config/git/.gitignore</code>:</p>
+                <p>Write anything you want to in it—a love letter? Why not! But don't forget to save the file.</p>
+            </li>
+            <li>
+                <p>Set the default location:</p>
+                <pre><code>git config --global core.excludeFile $HOME/.config/git/.gitignore</code></pre>
+                <p>You’re done!</p>
+            </li>
+        </ol>
+
+        <h2>Wait, There’s an Easy Way Too!</h2>
+        <p>You can also set this up more easily by editing the global Git configuration file directly:</p>
+        <pre><code>Go to ~/.gitconfig and add or change the excludeFile setting.</code></pre>
+        <img src="./images/global_gitignore.jpg"/>
+        <p>See, I just saved you a minute of your life!</p>
+    </div>
+</body>
+<script src="script.js"></script>
+</html>

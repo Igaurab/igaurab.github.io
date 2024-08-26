@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Readiness Probe and Host Configuration</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Understanding Kubernetes Readiness Probes and Host Configuration</h1>
+        <p>Today, I'd like to share an interesting learning experience I had with Kubernetes and service configuration. It was a journey of discovery that provided me with valuable insights about readiness probes in Kubernetes, and the importance of correctly setting the host for your application in a microservices environment.</p>
+
+        <h2>The Problem</h2>
+        <p>One fine day, while working on a Kubernetes deployment, I noticed an alarming error message being consistently reported:</p>
+        <pre><code>Warning  Unhealthy  118s (x21 over 3m33s)  kubelet  Readiness probe failed: Get "http://10.52.1.198:5000/api/v1/db/": dial tcp 10.52.1.198:5000: connect: connection refused</code></pre>
+        <p>This indicated that the readiness probe in my Kubernetes Pod was failing.</p>
+
+        <h2>The Readiness Probe</h2>
+        <p>Just to familiarize some readers, a readiness probe is used by Kubernetes to determine when a Pod is ready to accept traffic. A readiness probe can fail for several reasons. It might be due to the application not running, the startup time being greater than the initialDelaySeconds parameter, a networking issue, incorrect or inaccessible port, incorrect probe path, or resource limitations. Therefore, troubleshooting this issue involved running down this list to understand the exact issue.</p>
+
+        <h2>The Diagnosis and Solution</h2>
+        <p>In my case, after a bit of fiddling around, I found that my application was starting up on <code>127.0.0.1</code>. And there was the problem - which may not seem very obvious without a deeper understanding of network interfaces and their settings!</p>
+
+        <h3>Clarifying the Host Mystery</h3>
+        <p>Let's backtrack a little and discuss about the host settings like <code>127.0.0.1</code> and <code>0.0.0.0</code>. In networking, <code>127.0.0.1</code> is the loopback address, also known as localhost. This IP is used when a program needs to connect to a server running on the same machine as it is. It does not listen for requests from the external network. But when you are running applications inside Docker (or specifically Kubernetes which uses Docker), the container itself is considered an isolated “machine”.</p>
+
+        <p>This is where <code>0.0.0.0</code> comes into picture. <code>0.0.0.0</code> specifies all IPv4 addresses on the local machine. If a host has two IP addresses, <code>192.168.1.1</code> and <code>10.1.2.1</code>, and the host runs a server which listens on <code>0.0.0.0</code>, then the server will be reachable at both of those IPs. Thus, when your app is running inside Docker and is listening on <code>0.0.0.0</code>, it will accept connections on every network interface of the container.</p>
+
+        <p>When I made my application listen on <code>0.0.0.0:5000</code> instead of <code>127.0.0.1:5000</code>, it meant that the application was now capable of accepting connections on all network interfaces within the container, including from outside the container. Therefore, readiness probe coming from the Kubernetes scheduler to check if the application is up and running could now execute successfully.</p>
+
+        <p>I confirmed this by checking back on my error logs and seeing no probe failures. I also confirmed that my application was working correctly and was able to handle incoming traffic, thus verifying the solution.</p>
+
+        <h3>Setting the Host IP</h3>
+        <p>Setting the host IP to <code>0.0.0.0</code> while launching the app with uvicorn was as simple as executing:</p>
+        <pre><code>uvicorn main:app --host 0.0.0.0 --port 5000</code></pre>
+
+        <h2>Deep Dive into the Problem</h2>
+        <p>Now that we have the problem solved, let's deep dive for a moment and understand why the app worked locally but failed when deployed in Kubernetes.</p>
+
+        <p>When we run an application in our local system and we set it to listen on <code>127.0.0.1</code>, it means that the application will accept connections from the same machine. For all intents and purposes, this worked fine in a local development environment since both the application and the client making requests to it (via browser, Postman, etc) were on the same machine.</p>
+
+        <p>However, in a Kubernetes environment, the scenario changes. Inside a Kubernetes cluster, different applications reside in their own containers and possibly their own pods, each of which are like separate isolated machines. Consequently, an application listening on localhost is not reachable from another pod or even another container in the same pod.</p>
+
+        <p>For an application to be reachable from another container, the application needs to listen on a network interface that is connected to a network common to both containers. In most cases, setting the application to listen to <code>0.0.0.0</code> does the job. Technically speaking, the <code>0.0.0.0</code> IP address refers to all available network interfaces on the host system.</p>
+
+        <h2>Conclusion</h2>
+        <p>Getting a Kubernetes deployment to work correctly involves understanding various components, from containerization, networking interfaces to probes. It's an iterative process to check one element at a time to diagnose the problem.</p>
+
+        <p>This journey gave me a better insight into network interfaces in the context of a containerized application. I understood that an application listening on localhost (or <code>127.0.0.1</code>) cannot serve traffic originating from outside of its host (in this case, the container).</p>
+
+        <p>My key takeaway from this is to consider and understand the environment in which the code is going to run, especially when we are deploying into different stages (like development, testing, and production). Even seemingly small details such as on which IP a service listens can make a significant difference.</p>
+
+        <p class="footer">Happy coding, and remember, never stop learning!</p>
+    </div>
+</body>
+<script src="script.js"></script>
+</html>
